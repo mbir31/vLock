@@ -1,0 +1,6 @@
+{
+  "name": "vLock",
+  "description": "vLock is a highly customizable Quick SMS Command Controller app that allows offline command sending via background SMS or default messaging app integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
