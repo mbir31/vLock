@@ -9,10 +9,12 @@ class vLockRepository(private val database: vLockDatabase) {
     private val buttonConfigDao = database.buttonConfigDao()
     private val sentSmsLogDao = database.sentSmsLogDao()
     private val appSettingDao = database.appSettingDao()
+    private val commandScheduleDao = database.commandScheduleDao()
 
     val allButtonConfigs: Flow<List<ButtonConfig>> = buttonConfigDao.getAll()
     val allLogs: Flow<List<SentSmsLog>> = sentSmsLogDao.getAll()
     val allSettings: Flow<List<AppSetting>> = appSettingDao.getAllFlow()
+    val allSchedules: Flow<List<CommandSchedule>> = commandScheduleDao.getAllFlow()
 
     suspend fun initializeDefaultsIfNecessary() = withContext(Dispatchers.IO) {
         val existingButtons = buttonConfigDao.getAllList()
@@ -101,17 +103,41 @@ class vLockRepository(private val database: vLockDatabase) {
         sentSmsLogDao.update(log)
     }
 
-    suspend fun recordSmsReply(replyMessage: String, senderNumber: String? = null): SentSmsLog? = withContext(Dispatchers.IO) {
-        val log = if (!senderNumber.isNullOrBlank()) {
-            sentSmsLogDao.getLatestLogForNumber(senderNumber) ?: sentSmsLogDao.getLatestLog()
-        } else {
-            sentSmsLogDao.getLatestLog()
+    private fun isSamePhoneNumber(num1: String?, num2: String?): Boolean {
+        if (num1.isNullOrBlank() || num2.isNullOrBlank()) return true
+        val clean1 = num1.filter { it.isDigit() }
+        val clean2 = num2.filter { it.isDigit() }
+        if (clean1.isEmpty() || clean2.isEmpty()) return true
+        if (clean1 == clean2) return true
+        if (clean1.length >= 7 && clean2.length >= 7) {
+            val minLen = minOf(clean1.length, clean2.length, 10)
+            return clean1.takeLast(minLen) == clean2.takeLast(minLen)
+        }
+        return false
+    }
+
+    suspend fun recordSmsReply(
+        replyMessage: String,
+        senderNumber: String? = null,
+        smsTimestamp: Long = System.currentTimeMillis()
+    ): SentSmsLog? = withContext(Dispatchers.IO) {
+        val recentLogs = sentSmsLogDao.getRecentLogs()
+        if (recentLogs.isEmpty()) return@withContext null
+
+        // STRICT POLICY: Only match command SMS sent BEFORE or AT the time the reply SMS arrived,
+        // and ensure the command hasn't already received a reply.
+        val matchedLog = recentLogs.firstOrNull { log ->
+            val sentBeforeReply = log.timestamp <= (smsTimestamp + 5000L)
+            val numberMatches = senderNumber.isNullOrBlank() || isSamePhoneNumber(log.receiverNumber, senderNumber)
+            val isAwaitingReply = log.replyMessage == null
+
+            sentBeforeReply && numberMatches && isAwaitingReply
         }
 
-        if (log != null) {
-            val updatedLog = log.copy(
+        if (matchedLog != null) {
+            val updatedLog = matchedLog.copy(
                 replyMessage = replyMessage,
-                replyTimestamp = System.currentTimeMillis()
+                replyTimestamp = maxOf(smsTimestamp, System.currentTimeMillis())
             )
             sentSmsLogDao.update(updatedLog)
             updatedLog
@@ -143,5 +169,25 @@ class vLockRepository(private val database: vLockDatabase) {
 
     suspend fun getAllButtonsList(): List<ButtonConfig> = withContext(Dispatchers.IO) {
         buttonConfigDao.getAllList()
+    }
+
+    suspend fun insertSchedule(schedule: CommandSchedule): Long = withContext(Dispatchers.IO) {
+        commandScheduleDao.insert(schedule)
+    }
+
+    suspend fun updateSchedule(schedule: CommandSchedule) = withContext(Dispatchers.IO) {
+        commandScheduleDao.update(schedule)
+    }
+
+    suspend fun deleteSchedule(id: Long) = withContext(Dispatchers.IO) {
+        commandScheduleDao.deleteById(id)
+    }
+
+    suspend fun getAllSchedules(): List<CommandSchedule> = withContext(Dispatchers.IO) {
+        commandScheduleDao.getAll()
+    }
+
+    suspend fun getActiveSchedules(): List<CommandSchedule> = withContext(Dispatchers.IO) {
+        commandScheduleDao.getActiveSchedules()
     }
 }

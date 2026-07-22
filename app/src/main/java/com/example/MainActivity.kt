@@ -1,6 +1,8 @@
 package com.example
 
 import com.example.viewmodel.ReplySmsData
+import com.example.data.CommandSchedule
+import com.example.utils.vLockWidgetProvider
 import android.Manifest
 import android.app.Application
 import android.content.ClipData
@@ -17,7 +19,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -49,6 +51,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -174,6 +177,7 @@ fun vLockAppContent(
     // Active popup state
     var activePopup by remember { mutableStateOf<ActivePopup>(ActivePopup.None) }
     val replyPopupState by viewModel.activeReplyPopup.collectAsStateWithLifecycle()
+    val schedules by viewModel.schedules.collectAsStateWithLifecycle()
 
     // UI Helper Color parsers
     val primaryColorVal = parseColor(settings.buttonColor, MaterialTheme.colorScheme.primary)
@@ -374,18 +378,32 @@ fun vLockAppContent(
                     AnimatedContent(
                         targetState = currentScreen,
                         transitionSpec = {
-                            if (targetState == "settings") {
-                                slideInHorizontally { width -> width } + fadeIn() togetherWith
-                                        slideOutHorizontally { width -> -width } + fadeOut()
+                            val screenIndex = mapOf("home" to 0, "settings" to 1, "logs" to 2)
+                            val targetIdx = screenIndex[targetState] ?: 0
+                            val initialIdx = screenIndex[initialState] ?: 0
+
+                            if (targetIdx > initialIdx) {
+                                (slideInHorizontally(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    initialOffsetX = { width -> width }
+                                ) + fadeIn(tween(220))) togetherWith (slideOutHorizontally(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    targetOffsetX = { width -> -width }
+                                ) + fadeOut(tween(220)))
                             } else {
-                                slideInHorizontally { width -> -width } + fadeIn() togetherWith
-                                        slideOutHorizontally { width -> width } + fadeOut()
+                                (slideInHorizontally(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    initialOffsetX = { width -> -width }
+                                ) + fadeIn(tween(220))) togetherWith (slideOutHorizontally(
+                                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                                    targetOffsetX = { width -> width }
+                                ) + fadeOut(tween(220)))
                             }.using(SizeTransform(clip = false))
                         },
                         label = "ScreenTransition"
                     ) { screen ->
                         when (screen) {
-                            "home", "control" -> HomeScreen(
+                            "home" -> HomeScreen(
                                 viewModel = viewModel,
                                 settings = settings,
                                 buttonConfigs = buttonConfigs,
@@ -410,6 +428,7 @@ fun vLockAppContent(
                                 settings = settings,
                                 buttonConfigs = buttonConfigs,
                                 logs = logs,
+                                schedules = schedules,
                                 customFont = customFont,
                                 textColorVal = textColorVal,
                                 primaryColorVal = primaryColorVal,
@@ -530,13 +549,12 @@ fun iOSBottomNavBar(
             ) {
                 val tabs = listOf(
                     Triple("home", "Home", Icons.Default.Shield),
-                    Triple("control", "Control", Icons.Default.Lock),
-                    Triple("logs", "Logs", Icons.Default.History),
-                    Triple("settings", "Settings", Icons.Default.Settings)
+                    Triple("settings", "Settings", Icons.Default.Settings),
+                    Triple("logs", "History", Icons.Default.History)
                 )
 
                 tabs.forEach { (screenKey, label, icon) ->
-                    val isSelected = currentScreen == screenKey || (screenKey == "home" && currentScreen == "control")
+                    val isSelected = currentScreen == screenKey
 
                     Box(
                         modifier = Modifier
@@ -694,12 +712,24 @@ fun RapidPassHeroCard(
                             .border(1.5.dp, Color.White.copy(alpha = 0.5f), RoundedCornerShape(18.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "Security Shield",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
+                        if (settings.logoUri.isNotBlank()) {
+                            AsyncImage(
+                                model = settings.logoUri,
+                                contentDescription = "Hero Card Logo",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp)
+                                    .clip(RoundedCornerShape(14.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = "Security Shield",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -747,15 +777,26 @@ fun HomeScreen(
                         modifier = Modifier
                             .size(48.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFE0F2FE)),
+                            .background(headerBgColorVal.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = "Shield Logo",
-                            tint = Color(0xFF0284C7),
-                            modifier = Modifier.size(26.dp)
-                        )
+                        if (settings.logoUri.isNotBlank()) {
+                            AsyncImage(
+                                model = settings.logoUri,
+                                contentDescription = "App Header Logo",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.Shield,
+                                contentDescription = "Shield Logo",
+                                tint = primaryColorVal,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
@@ -848,11 +889,13 @@ fun HomeScreen(
                 }
             }
 
-            item {
-                RapidPassHeroCard(
-                    settings = settings,
-                    customFont = customFont
-                )
+            if (settings.showHeaderCard) {
+                item {
+                    RapidPassHeroCard(
+                        settings = settings,
+                        customFont = customFont
+                    )
+                }
             }
 
             val group1Buttons = buttonConfigs.filter { it.groupId == 1 && it.isEnabled }
@@ -943,7 +986,7 @@ fun LogsScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Command Logs",
+                text = "History",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF0F172A),
@@ -973,7 +1016,7 @@ fun LogsScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "No Command Logs Sent Yet",
+                        text = "No Command History Sent Yet",
                         color = Color(0xFF64748B),
                         fontFamily = customFont,
                         fontSize = 14.sp
@@ -1508,7 +1551,7 @@ fun ReplySmsPopupDialog(
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("View in Logs", fontFamily = customFont, fontSize = 12.sp)
+                Text("View in History", fontFamily = customFont, fontSize = 12.sp)
             }
         },
         dismissButton = {
@@ -1785,6 +1828,7 @@ fun SettingsScreen(
     settings: SettingsState,
     buttonConfigs: List<ButtonConfig>,
     logs: List<SentSmsLog>,
+    schedules: List<CommandSchedule>,
     customFont: FontFamily,
     textColorVal: Color,
     primaryColorVal: Color,
@@ -1795,7 +1839,27 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    var currentTab by remember { mutableStateOf("core") } // "core", "buttons", "security", "backup", "logs"
+    var currentTab by remember { mutableStateOf("core") } // "core", "schedules", "widget", "buttons", "security", "backup", "logs"
+
+    var receiverNumberState by remember { mutableStateOf(settings.receiverNumber) }
+    var titleTextState by remember { mutableStateOf(settings.titleText) }
+    var pinLockCodeState by remember { mutableStateOf(settings.pinLockCode) }
+
+    LaunchedEffect(settings.receiverNumber) {
+        if (receiverNumberState != settings.receiverNumber) {
+            receiverNumberState = settings.receiverNumber
+        }
+    }
+    LaunchedEffect(settings.titleText) {
+        if (titleTextState != settings.titleText) {
+            titleTextState = settings.titleText
+        }
+    }
+    LaunchedEffect(settings.pinLockCode) {
+        if (pinLockCodeState != settings.pinLockCode) {
+            pinLockCodeState = settings.pinLockCode
+        }
+    }
 
     val imageLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -1844,16 +1908,24 @@ fun SettingsScreen(
         ScrollableTabRow(
             selectedTabIndex = when (currentTab) {
                 "core" -> 0
-                "buttons" -> 1
-                "security" -> 2
-                "backup" -> 3
-                else -> 4
+                "schedules" -> 1
+                "widget" -> 2
+                "buttons" -> 3
+                "security" -> 4
+                "backup" -> 5
+                else -> 6
             },
             edgePadding = 16.dp,
             modifier = Modifier.fillMaxWidth()
         ) {
             Tab(selected = currentTab == "core", onClick = { currentTab = "core" }) {
                 Text("Core & UI", modifier = Modifier.padding(16.dp), fontFamily = customFont)
+            }
+            Tab(selected = currentTab == "schedules", onClick = { currentTab = "schedules" }) {
+                Text("Commands Schedule", modifier = Modifier.padding(16.dp), fontFamily = customFont)
+            }
+            Tab(selected = currentTab == "widget", onClick = { currentTab = "widget" }) {
+                Text("Widget Setup", modifier = Modifier.padding(16.dp), fontFamily = customFont)
             }
             Tab(selected = currentTab == "buttons", onClick = { currentTab = "buttons" }) {
                 Text("Buttons", modifier = Modifier.padding(16.dp), fontFamily = customFont)
@@ -1865,7 +1937,7 @@ fun SettingsScreen(
                 Text("Backup", modifier = Modifier.padding(16.dp), fontFamily = customFont)
             }
             Tab(selected = currentTab == "logs", onClick = { currentTab = "logs" }) {
-                Text("Logs", modifier = Modifier.padding(16.dp), fontFamily = customFont)
+                Text("History", modifier = Modifier.padding(16.dp), fontFamily = customFont)
             }
         }
 
@@ -1927,8 +1999,11 @@ fun SettingsScreen(
                         // Receiver Phone Number
                         item {
                             OutlinedTextField(
-                                value = settings.receiverNumber,
-                                onValueChange = { viewModel.updateSetting("receiver_number", it) },
+                                value = receiverNumberState,
+                                onValueChange = {
+                                    receiverNumberState = it
+                                    viewModel.updateSetting("receiver_number", it)
+                                },
                                 label = { Text("Receiver Phone Number", fontFamily = customFont) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth(),
@@ -1954,51 +2029,111 @@ fun SettingsScreen(
                             }
                         }
 
+                        // Show Receiver Header Card Toggle
+                        item {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text("Show Target Receiver Header Card", fontWeight = FontWeight.Bold, fontFamily = customFont)
+                                    Text("Display top blue card with receiver number & status on Home screen", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontFamily = customFont)
+                                }
+                                Switch(
+                                    checked = settings.showHeaderCard,
+                                    onCheckedChange = { viewModel.updateSetting("show_header_card", it.toString()) }
+                                )
+                            }
+                        }
+
                         item { Divider() }
 
                         // UI Customizations
                         item {
-                            Text("UI THEME CUSTOMIZATION", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = customFont)
+                            Text("UI & APPEARANCE CUSTOMIZATION", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = customFont)
                         }
 
-                        // Theme Interface Selector (Glassmorphism, Simple B&W, Default Flat, 3D Tactile, Heavy Pro Gold, Cyberpunk Industrial)
+                        // Launcher App Icon Option
                         item {
-                            Column {
-                                Text("Interface Theme Style", fontWeight = FontWeight.SemiBold, fontFamily = customFont)
-                                Text("Select tile surface and acrylic depth theme", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontFamily = customFont)
-                                Spacer(modifier = Modifier.height(8.dp))
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color(0xFFF8FAFC))
+                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Text(
+                                    text = "LAUNCHER APP ICON",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF0284C7),
+                                    fontFamily = customFont
+                                )
+                                Text(
+                                    text = "Select launcher icon style for home screen",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF64748B),
+                                    fontFamily = customFont
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                val icons = listOf(
+                                    Triple("Default", "Red Security Pin", Color(0xFFE51919)),
+                                    Triple("Blue", "Classic Blue Shield", Color(0xFF0284C7)),
+                                    Triple("Cyber", "Cyber Green Guard", Color(0xFF10B981)),
+                                    Triple("Gold", "Gold Shield Lock", Color(0xFFEAB308)),
+                                    Triple("Dark", "Dark Stealth Shield", Color(0xFF334155))
+                                )
+
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState())
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    val styles = listOf(
-                                        "Glassmorphism" to "✨ Glass",
-                                        "Simple B&W" to "🔳 Simple B&W",
-                                        "Default" to "Neosleek",
-                                        "3D Tactile" to "3D Tactile",
-                                        "Heavy Pro Gold" to "Gold",
-                                        "Cyberpunk Industrial" to "Cyber"
-                                    )
-                                    styles.forEach { (styleKey, styleLabel) ->
-                                        val isSelected = settings.uiThemeStyle == styleKey
-                                        Box(
+                                    icons.forEach { (key, label, colorVal) ->
+                                        val isSelected = settings.appIconStyle == key
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                                .clickable { viewModel.updateSetting("ui_theme_style", styleKey) }
-                                                .padding(vertical = 8.dp, horizontal = 10.dp),
-                                            contentAlignment = Alignment.Center
+                                                .width(96.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(if (isSelected) Color(0xFFE0F2FE) else Color.White)
+                                                .border(
+                                                    width = if (isSelected) 2.dp else 1.dp,
+                                                    color = if (isSelected) Color(0xFF0284C7) else Color(0xFFE2E8F0),
+                                                    shape = RoundedCornerShape(12.dp)
+                                                )
+                                                .clickable {
+                                                    viewModel.changeLauncherIcon(context, key)
+                                                    Toast.makeText(context, "Launcher Icon set to $key", Toast.LENGTH_SHORT).show()
+                                                }
+                                                .padding(vertical = 10.dp, horizontal = 6.dp)
                                         ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(38.dp)
+                                                    .clip(CircleShape)
+                                                    .background(colorVal.copy(alpha = 0.2f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Shield,
+                                                    contentDescription = label,
+                                                    tint = colorVal,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(6.dp))
                                             Text(
-                                                text = styleLabel,
+                                                text = key,
                                                 fontSize = 11.sp,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = if (isSelected) Color(0xFF0284C7) else Color(0xFF1E293B),
                                                 fontFamily = customFont,
-                                                textAlign = TextAlign.Center,
-                                                maxLines = 1
+                                                textAlign = TextAlign.Center
                                             )
                                         }
                                     }
@@ -2009,15 +2144,18 @@ fun SettingsScreen(
                         // App Title Customization
                         item {
                             OutlinedTextField(
-                                value = settings.titleText,
-                                onValueChange = { viewModel.updateSetting("title_text", it) },
+                                value = titleTextState,
+                                onValueChange = {
+                                    titleTextState = it
+                                    viewModel.updateSetting("title_text", it)
+                                },
                                 label = { Text("App Header Title", fontFamily = customFont) },
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
 
-                        // Title Bold and Day/Night
+                        // Title Bold
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -2029,37 +2167,6 @@ fun SettingsScreen(
                                     checked = settings.titleBold,
                                     onCheckedChange = { viewModel.updateSetting("title_bold", it.toString()) }
                                 )
-                            }
-                        }
-
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text("Day/Night Theme Mode", fontWeight = FontWeight.SemiBold, fontFamily = customFont)
-                                    Text("Current: ${settings.themeMode}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontFamily = customFont)
-                                }
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    listOf("System", "Light", "Dark").forEach { mode ->
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (settings.themeMode == mode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                                                .clickable { viewModel.updateSetting("theme_mode", mode) }
-                                                .padding(horizontal = 8.dp, vertical = 6.dp)
-                                        ) {
-                                            Text(
-                                                text = mode,
-                                                fontSize = 11.sp,
-                                                color = if (settings.themeMode == mode) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                                fontFamily = customFont
-                                            )
-                                        }
-                                    }
-                                }
                             }
                         }
 
@@ -2091,42 +2198,82 @@ fun SettingsScreen(
                             }
                         }
 
-                        // Logo Customizations
+                        // Custom Logo Asset with Live Image Preview
                         item {
-                            Column {
-                                Text("Custom Logo Asset", fontWeight = FontWeight.SemiBold, fontFamily = customFont)
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(Color(0xFFF8FAFC))
+                                    .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Text("Header Custom Logo Image", fontWeight = FontWeight.SemiBold, fontFamily = customFont)
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Button(
-                                        onClick = { imageLauncher.launch("image/*") },
-                                        modifier = Modifier.weight(1f)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(56.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFFE0F2FE))
+                                            .border(1.5.dp, Color(0xFF0284C7), CircleShape),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(imageVector = Icons.Default.AddPhotoAlternate, contentDescription = "Pick Image")
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Select Logo", fontSize = 11.sp)
+                                        if (settings.logoUri.isNotEmpty()) {
+                                            AsyncImage(
+                                                model = settings.logoUri,
+                                                contentDescription = "Uploaded Logo",
+                                                modifier = Modifier
+                                                    .fillMaxSize()
+                                                    .clip(CircleShape),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Default.Shield,
+                                                contentDescription = "Default Logo",
+                                                tint = Color(0xFF0284C7),
+                                                modifier = Modifier.size(28.dp)
+                                            )
+                                        }
                                     }
 
-                                    if (settings.logoUri.isNotEmpty()) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Button(
-                                            onClick = { viewModel.updateSetting("logo_uri", "") },
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                            modifier = Modifier.weight(1f)
+                                            onClick = { imageLauncher.launch("image/*") },
+                                            modifier = Modifier.fillMaxWidth()
                                         ) {
-                                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                                            Icon(imageVector = Icons.Default.AddPhotoAlternate, contentDescription = "Pick Image")
                                             Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Remove Logo", fontSize = 11.sp)
+                                            Text("Select/Upload Logo", fontSize = 11.sp)
+                                        }
+
+                                        if (settings.logoUri.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Button(
+                                                onClick = { viewModel.updateSetting("logo_uri", "") },
+                                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete")
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Remove Logo", fontSize = 11.sp)
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
 
-                        // Dynamic Color Pickers
+                        // Dynamic Color Pickers (Support Any Color)
                         item {
                             ColorSwatchPicker(
-                                label = "Accent Color (Logo & Details)",
+                                label = "Accent Color (Details & Highlights)",
                                 currentValue = settings.accentColor,
-                                swatches = listOf("#00E676", "#FFD600", "#FF1744", "#2979FF", "#D500F9", "#00B0FF"),
+                                swatches = listOf("#00E676", "#FFD600", "#FF1744", "#2979FF", "#D500F9", "#00B0FF", "#FF5722", "#E91E63"),
                                 onColorSelected = { viewModel.updateSetting("accent_color", it) },
                                 customFont = customFont
                             )
@@ -2136,7 +2283,7 @@ fun SettingsScreen(
                             ColorSwatchPicker(
                                 label = "Header Background Color",
                                 currentValue = settings.headerBackgroundColor,
-                                swatches = listOf("#1E1E1E", "#0D47A1", "#1B5E20", "#B71C1C", "#4A148C", "#E65100"),
+                                swatches = listOf("#1E1E1E", "#0D47A1", "#1B5E20", "#B71C1C", "#4A148C", "#E65100", "#004D40", "#263238"),
                                 onColorSelected = { viewModel.updateSetting("header_background_color", it) },
                                 customFont = customFont
                             )
@@ -2144,9 +2291,9 @@ fun SettingsScreen(
 
                         item {
                             ColorSwatchPicker(
-                                label = "Grid Button Base Color",
+                                label = "Grid Action Buttons Base Color",
                                 currentValue = settings.buttonColor,
-                                swatches = listOf("#2C2C2C", "#1E88E5", "#43A047", "#E53935", "#8E24AA", "#F4511E"),
+                                swatches = listOf("#2C2C2C", "#1E88E5", "#43A047", "#E53935", "#8E24AA", "#F4511E", "#00838F", "#37474F"),
                                 onColorSelected = { viewModel.updateSetting("button_color", it) },
                                 customFont = customFont
                             )
@@ -2154,9 +2301,9 @@ fun SettingsScreen(
 
                         item {
                             ColorSwatchPicker(
-                                label = "Header Text & Icons Color",
+                                label = "Header Texts & Icons Color",
                                 currentValue = settings.textColor,
-                                swatches = listOf("#FFFFFF", "#E0E0E0", "#FFD54F", "#81C784", "#64B5F6", "#000000"),
+                                swatches = listOf("#FFFFFF", "#E0E0E0", "#FFD54F", "#81C784", "#64B5F6", "#000000", "#FF8A80", "#CCFF90"),
                                 onColorSelected = { viewModel.updateSetting("text_color", it) },
                                 customFont = customFont
                             )
@@ -2217,6 +2364,24 @@ fun SettingsScreen(
                     }
                 }
 
+                "schedules" -> {
+                    CommandsScheduleSection(
+                        viewModel = viewModel,
+                        schedules = schedules,
+                        buttonConfigs = buttonConfigs,
+                        customFont = customFont
+                    )
+                }
+
+                "widget" -> {
+                    WidgetSetupSection(
+                        viewModel = viewModel,
+                        settings = settings,
+                        buttonConfigs = buttonConfigs,
+                        customFont = customFont
+                    )
+                }
+
                 "buttons" -> {
                     // Customizable Button configuration list with Reordering and customization option
                     LazyColumn(
@@ -2233,8 +2398,17 @@ fun SettingsScreen(
                             )
                         }
 
-                        items(buttonConfigs) { button ->
+                        items(buttonConfigs, key = { it.id }) { button ->
                             var isEditing by remember { mutableStateOf(false) }
+                            var nameText by remember(button.id) { mutableStateOf(button.name) }
+                            var codeText by remember(button.id) { mutableStateOf(button.smsCode) }
+
+                            LaunchedEffect(button.name, button.smsCode) {
+                                if (!isEditing) {
+                                    nameText = button.name
+                                    codeText = button.smsCode
+                                }
+                            }
 
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
@@ -2318,8 +2492,11 @@ fun SettingsScreen(
                                         Spacer(modifier = Modifier.height(12.dp))
 
                                         OutlinedTextField(
-                                            value = button.name,
-                                            onValueChange = { viewModel.updateButtonConfig(button.copy(name = it)) },
+                                            value = nameText,
+                                            onValueChange = {
+                                                nameText = it
+                                                viewModel.updateButtonConfig(button.copy(name = it))
+                                            },
                                             label = { Text("Display Label", fontFamily = customFont) },
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth()
@@ -2328,8 +2505,11 @@ fun SettingsScreen(
                                         Spacer(modifier = Modifier.height(8.dp))
 
                                         OutlinedTextField(
-                                            value = button.smsCode,
-                                            onValueChange = { viewModel.updateButtonConfig(button.copy(smsCode = it)) },
+                                            value = codeText,
+                                            onValueChange = {
+                                                codeText = it
+                                                viewModel.updateButtonConfig(button.copy(smsCode = it))
+                                            },
                                             label = { Text("Linked SMS Code / Action", fontFamily = customFont) },
                                             singleLine = true,
                                             modifier = Modifier.fillMaxWidth()
@@ -2425,9 +2605,10 @@ fun SettingsScreen(
                         if (settings.pinLockEnabled) {
                             item {
                                 OutlinedTextField(
-                                    value = settings.pinLockCode,
+                                    value = pinLockCodeState,
                                     onValueChange = {
                                         if (it.length <= 4 && it.all { char -> char.isDigit() }) {
+                                            pinLockCodeState = it
                                             viewModel.updateSetting("pin_lock_code", it)
                                         }
                                     },
@@ -2666,7 +2847,7 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("COMMAND HISTORY LOGS", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = customFont)
+                            Text("COMMAND HISTORY", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = customFont)
                             if (logs.isNotEmpty()) {
                                 TextButton(onClick = { viewModel.clearLogs() }) {
                                     Text("Clear All", color = MaterialTheme.colorScheme.error, fontFamily = customFont)
@@ -2796,48 +2977,174 @@ fun ColorSwatchPicker(
     onColorSelected: (String) -> Unit,
     customFont: FontFamily
 ) {
-    Column {
-        Text(text = label, fontWeight = FontWeight.SemiBold, fontFamily = customFont)
-        Spacer(modifier = Modifier.height(6.dp))
+    var customHexInput by remember(currentValue) { mutableStateOf(currentValue) }
+    val activeColor = parseColor(currentValue, Color.Unspecified)
+    val inputPreviewColor = parseColor(customHexInput, Color.Unspecified)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFF8FAFC))
+            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(16.dp))
+            .padding(12.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = label,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = Color(0xFF1E293B),
+                fontFamily = customFont
+            )
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = if (activeColor != Color.Unspecified) activeColor else Color.Transparent,
+                    border = BorderStroke(1.5.dp, Color(0xFFCBD5E1)),
+                    modifier = Modifier.size(22.dp)
+                ) {
+                    if (activeColor == Color.Unspecified) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.FormatColorReset,
+                                contentDescription = "Default",
+                                tint = Color(0xFF64748B),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = if (currentValue.isBlank()) "Default" else currentValue.uppercase(),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF64748B),
+                    fontFamily = customFont
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Preset Swatches Row
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // Default Reset Swatch
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .clip(CircleShape)
+                    .background(Color.White)
+                    .border(
+                        width = if (currentValue.isEmpty()) 2.5.dp else 1.dp,
+                        color = if (currentValue.isEmpty()) Color(0xFF0284C7) else Color(0xFFCBD5E1),
+                        shape = CircleShape
+                    )
+                    .clickable {
+                        customHexInput = ""
+                        onColorSelected("")
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.FormatColorReset,
+                    contentDescription = "Default color",
+                    tint = if (currentValue.isEmpty()) Color(0xFF0284C7) else Color(0xFF64748B),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
             swatches.forEach { hex ->
-                val isSelected = currentValue == hex
-                val isDefault = hex.isEmpty()
+                val isSelected = currentValue.equals(hex, ignoreCase = true)
+                val colorVal = parseColor(hex, Color.Gray)
 
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
                         .clip(CircleShape)
-                        .background(
-                            if (isDefault) Color.Transparent
-                            else Color(android.graphics.Color.parseColor(hex))
-                        )
+                        .background(colorVal)
                         .border(
-                            width = if (isSelected) 3.dp else 1.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                            width = if (isSelected) 2.5.dp else 1.dp,
+                            color = if (isSelected) Color(0xFF0284C7) else Color.White,
                             shape = CircleShape
                         )
-                        .clickable { onColorSelected(hex) },
+                        .clickable {
+                            customHexInput = hex
+                            onColorSelected(hex)
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isDefault) {
-                        Icon(
-                            imageVector = Icons.Default.FormatColorReset,
-                            contentDescription = "Default color",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else if (isSelected) {
+                    if (isSelected) {
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = "Selected",
-                            tint = if (hex == "#FFFFFF" || hex == "#FFD54F") Color.Black else Color.White,
+                            tint = if (hex.equals("#FFFFFF", ignoreCase = true) || hex.equals("#FFD54F", ignoreCase = true)) Color.Black else Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                     }
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Custom Hex Input Row (Allows ANY color hex)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = customHexInput,
+                onValueChange = { input ->
+                    customHexInput = input
+                    val clean = if (input.startsWith("#")) input else "#$input"
+                    if (clean.length == 7 || clean.length == 9) {
+                        val parsed = parseColor(clean, Color.Unspecified)
+                        if (parsed != Color.Unspecified) {
+                            onColorSelected(clean)
+                        }
+                    }
+                },
+                placeholder = { Text("Custom Hex e.g. #FF5722", fontSize = 11.sp, fontFamily = customFont) },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+                textStyle = TextStyle(fontSize = 12.sp, fontFamily = customFont),
+                leadingIcon = {
+                    Surface(
+                        shape = CircleShape,
+                        color = if (inputPreviewColor != Color.Unspecified) inputPreviewColor else Color.Transparent,
+                        border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                        modifier = Modifier.size(18.dp)
+                    ) {}
+                }
+            )
+
+            Button(
+                onClick = {
+                    val clean = if (customHexInput.startsWith("#")) customHexInput else "#$customHexInput"
+                    val parsed = parseColor(clean, Color.Unspecified)
+                    if (parsed != Color.Unspecified) {
+                        onColorSelected(clean)
+                    }
+                },
+                enabled = inputPreviewColor != Color.Unspecified,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Apply", fontSize = 11.sp, fontFamily = customFont)
             }
         }
     }
@@ -2858,5 +3165,586 @@ fun parseColor(hex: String, fallback: Color): Color {
         Color(colorInt)
     } catch (e: Exception) {
         fallback
+    }
+}
+
+@Composable
+fun CommandsScheduleSection(
+    viewModel: vLockViewModel,
+    schedules: List<CommandSchedule>,
+    buttonConfigs: List<ButtonConfig>,
+    customFont: FontFamily
+) {
+    var showAddCard by remember { mutableStateOf(false) }
+
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        item {
+            Text(
+                "COMMANDS SCHEDULE",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                fontFamily = customFont
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Configure automatic SMS command execution at specific times and days.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                fontFamily = customFont
+            )
+        }
+
+        if (schedules.isEmpty()) {
+            item {
+                Text(
+                    "Setup your first command schedule:",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    fontFamily = customFont,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                ScheduleEditCard(
+                    schedule = null,
+                    buttonConfigs = buttonConfigs,
+                    customFont = customFont,
+                    onSave = { newSchedule ->
+                        viewModel.saveSchedule(newSchedule)
+                    },
+                    onCancel = null
+                )
+            }
+        } else {
+            items(schedules, key = { it.id }) { schedule ->
+                ScheduleItemCard(
+                    schedule = schedule,
+                    buttonConfigs = buttonConfigs,
+                    customFont = customFont,
+                    onToggle = { viewModel.toggleSchedule(schedule) },
+                    onDelete = { viewModel.deleteSchedule(schedule.id) },
+                    onSaveUpdate = { updatedSchedule -> viewModel.saveSchedule(updatedSchedule) }
+                )
+            }
+
+            item {
+                if (showAddCard) {
+                    ScheduleEditCard(
+                        schedule = null,
+                        buttonConfigs = buttonConfigs,
+                        customFont = customFont,
+                        onSave = { newSchedule ->
+                            viewModel.saveSchedule(newSchedule)
+                            showAddCard = false
+                        },
+                        onCancel = { showAddCard = false }
+                    )
+                } else {
+                    OutlinedButton(
+                        onClick = { showAddCard = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = "Add Schedule")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("+ Add Another Schedule", fontFamily = customFont, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ScheduleItemCard(
+    schedule: CommandSchedule,
+    buttonConfigs: List<ButtonConfig>,
+    customFont: FontFamily,
+    onToggle: () -> Unit,
+    onDelete: () -> Unit,
+    onSaveUpdate: (CommandSchedule) -> Unit
+) {
+    var isEditing by remember { mutableStateOf(false) }
+
+    if (isEditing) {
+        ScheduleEditCard(
+            schedule = schedule,
+            buttonConfigs = buttonConfigs,
+            customFont = customFont,
+            onSave = { updated ->
+                onSaveUpdate(updated)
+                isEditing = false
+            },
+            onCancel = { isEditing = false }
+        )
+    } else {
+        val targetBtn = buttonConfigs.find { it.id == schedule.buttonId }
+        val buttonName = targetBtn?.name ?: schedule.buttonId.uppercase()
+        val emoji = getEmojiForButtonId(schedule.buttonId)
+
+        Card(
+            colors = CardDefaults.cardColors(
+                containerColor = if (schedule.isEnabled) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+            ),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(emoji, fontSize = 18.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(buttonName, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = customFont)
+                            Text("SMS Code: ${targetBtn?.smsCode ?: ""}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontFamily = customFont)
+                        }
+                    }
+
+                    Switch(
+                        checked = schedule.isEnabled,
+                        onCheckedChange = { onToggle() }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        val amPm = if (schedule.hour >= 12) "PM" else "AM"
+                        val twelveHour = if (schedule.hour % 12 == 0) 12 else schedule.hour % 12
+                        Text(
+                            text = String.format("%02d:%02d %s", twelveHour, schedule.minute, amPm),
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontFamily = customFont
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (schedule.daysOfWeek.isBlank()) "Everyday" else schedule.daysOfWeek,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                            fontFamily = customFont
+                        )
+                    }
+
+                    Row {
+                        IconButton(onClick = { isEditing = true }) {
+                            Icon(imageVector = Icons.Default.Edit, contentDescription = "Edit Schedule", tint = MaterialTheme.colorScheme.primary)
+                        }
+                        IconButton(onClick = onDelete) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Delete Schedule", tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ScheduleEditCard(
+    schedule: CommandSchedule?,
+    buttonConfigs: List<ButtonConfig>,
+    customFont: FontFamily,
+    onSave: (CommandSchedule) -> Unit,
+    onCancel: (() -> Unit)?
+) {
+    val enabledButtons = buttonConfigs.filter { it.isEnabled }
+    var selectedButtonId by remember(schedule) { mutableStateOf(schedule?.buttonId ?: enabledButtons.firstOrNull()?.id ?: "status") }
+    var hourState by remember(schedule) { mutableIntStateOf(schedule?.hour ?: 8) }
+    var minuteState by remember(schedule) { mutableIntStateOf(schedule?.minute ?: 0) }
+
+    val allDays = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+    var selectedDays by remember(schedule) {
+        val daysList = if (schedule == null || schedule.daysOfWeek.isBlank() || schedule.daysOfWeek.equals("Everyday", ignoreCase = true)) {
+            allDays.toMutableSet()
+        } else {
+            schedule.daysOfWeek.split(",").map { it.trim() }.toMutableSet()
+        }
+        mutableStateOf(daysList)
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = if (schedule == null) "Configure New Schedule" else "Edit Schedule",
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.primary,
+                fontFamily = customFont
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Action Button Selector
+            Text("Select Action Command:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = customFont)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                enabledButtons.forEach { btn ->
+                    val isSelected = btn.id == selectedButtonId
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { selectedButtonId = btn.id },
+                        label = { Text(btn.name, fontFamily = customFont, fontSize = 12.sp) },
+                        leadingIcon = { Text(getEmojiForButtonId(btn.id), fontSize = 14.sp) }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Time Picker Input (Hour & Minute Selector)
+            Text("Execution Time:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = customFont)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Hour Selector
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Hour (${String.format("%02d", hourState)})", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { if (hourState > 0) hourState-- else hourState = 23 }) {
+                            Text("-", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            text = String.format("%02d", hourState),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = customFont
+                        )
+                        IconButton(onClick = { if (hourState < 23) hourState++ else hourState = 0 }) {
+                            Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Text(":", fontSize = 22.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
+
+                // Minute Selector
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Minute (${String.format("%02d", minuteState)})", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { if (minuteState >= 5) minuteState -= 5 else minuteState = 55 }) {
+                            Text("-", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Text(
+                            text = String.format("%02d", minuteState),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = customFont
+                        )
+                        IconButton(onClick = { if (minuteState <= 50) minuteState += 5 else minuteState = 0 }) {
+                            Text("+", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // AM / PM Display
+                val amPm = if (hourState >= 12) "PM" else "AM"
+                val twelveHour = if (hourState % 12 == 0) 12 else hourState % 12
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.padding(start = 4.dp)
+                ) {
+                    Text(
+                        text = "$twelveHour:${String.format("%02d", minuteState)} $amPm",
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                        fontFamily = customFont
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Repeat Days Selection
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Repeat Days:", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, fontFamily = customFont)
+                TextButton(onClick = {
+                    if (selectedDays.size == allDays.size) {
+                        selectedDays = mutableSetOf()
+                    } else {
+                        selectedDays = allDays.toMutableSet()
+                    }
+                }) {
+                    Text(if (selectedDays.size == allDays.size) "Clear All" else "Everyday", fontSize = 11.sp)
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                allDays.forEach { day ->
+                    val isDaySelected = selectedDays.contains(day)
+                    FilterChip(
+                        selected = isDaySelected,
+                        onClick = {
+                            val newDays = selectedDays.toMutableSet()
+                            if (isDaySelected) newDays.remove(day) else newDays.add(day)
+                            selectedDays = newDays
+                        },
+                        label = { Text(day.take(1), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        modifier = Modifier.weight(1f).padding(horizontal = 1.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (onCancel != null) {
+                    TextButton(onClick = onCancel) {
+                        Text("Cancel", fontFamily = customFont)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+
+                Button(
+                    onClick = {
+                        val daysStr = if (selectedDays.size == allDays.size) "Everyday" else selectedDays.joinToString(",")
+                        val timeFormatted = String.format("%02d:%02d", hourState, minuteState)
+                        val newSchedule = CommandSchedule(
+                            id = schedule?.id ?: 0L,
+                            buttonId = selectedButtonId,
+                            timeFormatted = timeFormatted,
+                            hour = hourState,
+                            minute = minuteState,
+                            daysOfWeek = daysStr,
+                            isEnabled = true
+                        )
+                        onSave(newSchedule)
+                    },
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(imageVector = Icons.Default.Check, contentDescription = "Save", modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Save Schedule", fontFamily = customFont, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WidgetSetupSection(
+    viewModel: vLockViewModel,
+    settings: SettingsState,
+    buttonConfigs: List<ButtonConfig>,
+    customFont: FontFamily
+) {
+    val context = LocalContext.current
+    val enabledButtons = buttonConfigs.filter { it.isEnabled }
+    val savedIds = remember(settings.widgetButtonIds, enabledButtons) {
+        if (settings.widgetButtonIds.isNotBlank()) {
+            settings.widgetButtonIds.split(",").map { it.trim() }.filter { id -> enabledButtons.any { it.id == id } }
+        } else {
+            enabledButtons.take(4).map { it.id }
+        }
+    }
+
+    var selectedIds by remember(savedIds) { mutableStateOf(savedIds.take(4)) }
+
+    LazyColumn(
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize()
+    ) {
+        item {
+            Text(
+                "HOME SCREEN WIDGET SETUP",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                fontFamily = customFont
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                "Select 1 to 4 action buttons to display on your Android Home Screen widget for instant command access.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                fontFamily = customFont
+            )
+        }
+
+        item {
+            // Live Widget Preview Box
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B)),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0xFF334155)),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Widget Live Preview", fontSize = 11.sp, color = Color(0xFF94A3B8), fontFamily = customFont)
+                        Text("${selectedIds.size} / 4 Selected", fontSize = 11.sp, color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold, fontFamily = customFont)
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        selectedIds.forEach { btnId ->
+                            val button = enabledButtons.find { it.id == btnId }
+                            if (button != null) {
+                                Surface(
+                                    modifier = Modifier.weight(1f).height(64.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFF0F172A),
+                                    border = BorderStroke(1.dp, Color(0xFF0284C7))
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.Center
+                                    ) {
+                                        Text(getEmojiForButtonId(button.id), fontSize = 16.sp)
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(button.name, fontSize = 10.sp, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                        if (selectedIds.isEmpty()) {
+                            Text("No buttons selected yet.", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Text(
+                "Tap to select/deselect buttons (Max 4):",
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                fontFamily = customFont
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                enabledButtons.chunked(3).forEach { rowButtons ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        rowButtons.forEach { btn ->
+                            val isSelected = selectedIds.contains(btn.id)
+                            FilterChip(
+                                selected = isSelected,
+                                onClick = {
+                                    val newList = selectedIds.toMutableList()
+                                    if (isSelected) {
+                                        newList.remove(btn.id)
+                                    } else {
+                                        if (newList.size < 4) {
+                                            newList.add(btn.id)
+                                        } else {
+                                            Toast.makeText(context, "Maximum 4 buttons allowed on Widget", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                    selectedIds = newList
+                                    viewModel.updateSetting("widget_button_ids", newList.joinToString(","))
+                                },
+                                label = { Text(btn.name, fontFamily = customFont, fontSize = 11.sp) },
+                                leadingIcon = { Text(getEmojiForButtonId(btn.id), fontSize = 13.sp) },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    viewModel.updateSetting("widget_button_ids", selectedIds.joinToString(","))
+                    vLockWidgetProvider.updateAllWidgets(context)
+                    Toast.makeText(context, "Widget Updated Successfully!", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Apply & Sync Widget to Home Screen", fontFamily = customFont, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+fun getEmojiForButtonId(id: String): String {
+    return when (id.lowercase()) {
+        "status" -> "⚡"
+        "location" -> "📍"
+        "lock" -> "🔒"
+        "unlock" -> "🔓"
+        "alarm_on" -> "🚨"
+        "alarm_off" -> "🔕"
+        "vs_call" -> "📞"
+        "theft" -> "🛡️"
+        "low_power" -> "🔋"
+        "two_m_lock" -> "🔐"
+        "sensitivity" -> "⚙️"
+        "rf_remote" -> "📻"
+        "apn" -> "🌐"
+        "forgot_pin" -> "❓"
+        "pin_reset" -> "🔢"
+        "sub_admin" -> "👤"
+        else -> "🔘"
     }
 }

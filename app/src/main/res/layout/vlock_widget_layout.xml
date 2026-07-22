@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:background="@drawable/widget_background">
+
+    <!-- Header Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="6dp">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:src="@drawable/ic_launcher_foreground"
+            android:contentDescription="vLock" />
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="6dp"
+            android:text="vLock SMS Quick Action"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/widget_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ready"
+            android:textColor="#38BDF8"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Buttons Container (Grid / Row for 1 to 4 buttons) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="horizontal"
+        android:gravity="center">
+
+        <!-- Widget Button 1 -->
+        <LinearLayout
+            android:id="@+id/widget_btn_1_container"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="6dp"
+            android:background="@drawable/widget_button_bg"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/widget_btn_1_icon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:text="⚡"
+                android:textSize="18sp"
+                android:textColor="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/widget_btn_1_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Status"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Widget Button 2 -->
+        <LinearLayout
+            android:id="@+id/widget_btn_2_container"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="6dp"
+            android:background="@drawable/widget_button_bg"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/widget_btn_2_icon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:text="📍"
+                android:textSize="18sp"
+                android:textColor="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/widget_btn_2_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Location"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Widget Button 3 -->
+        <LinearLayout
+            android:id="@+id/widget_btn_3_container"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="6dp"
+            android:background="@drawable/widget_button_bg"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/widget_btn_3_icon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:text="🔒"
+                android:textSize="18sp"
+                android:textColor="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/widget_btn_3_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Lock"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <!-- Widget Button 4 -->
+        <LinearLayout
+            android:id="@+id/widget_btn_4_container"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="6dp"
+            android:background="@drawable/widget_button_bg"
+            android:clickable="true"
+            android:focusable="true">
+
+            <TextView
+                android:id="@+id/widget_btn_4_icon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:gravity="center"
+                android:text="🔓"
+                android:textSize="18sp"
+                android:textColor="#FFFFFF" />
+
+            <TextView
+                android:id="@+id/widget_btn_4_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="Unlock"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

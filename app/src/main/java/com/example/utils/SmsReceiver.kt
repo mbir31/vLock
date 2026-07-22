@@ -12,8 +12,9 @@ class SmsReceiver : BroadcastReceiver() {
             for (sms in messages) {
                 val sender = sms.originatingAddress ?: ""
                 val body = sms.messageBody ?: ""
+                val timestamp = if (sms.timestampMillis > 0) sms.timestampMillis else System.currentTimeMillis()
                 if (body.isNotBlank()) {
-                    SmsReplyHandler.onSmsReceived(sender, body)
+                    SmsReplyHandler.onSmsReceived(sender, body, timestamp)
                 }
             }
         }

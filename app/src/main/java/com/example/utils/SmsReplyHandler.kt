@@ -14,7 +14,7 @@ object SmsReplyHandler {
         viewModelRef = null
     }
 
-    fun onSmsReceived(sender: String, message: String) {
-        viewModelRef?.get()?.triggerReplyReceived(sender, message)
+    fun onSmsReceived(sender: String, message: String, timestamp: Long = System.currentTimeMillis()) {
+        viewModelRef?.get()?.triggerReplyReceived(sender, message, timestamp)
     }
 }
