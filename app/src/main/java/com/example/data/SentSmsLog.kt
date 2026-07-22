@@ -12,5 +12,7 @@ data class SentSmsLog(
     val receiverNumber: String,
     val sendingMode: String, // "Background" or "Default App"
     val status: String, // "SUCCESS", "FAILURE", "OPENED"
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val replyMessage: String? = null,
+    val replyTimestamp: Long? = null
 )

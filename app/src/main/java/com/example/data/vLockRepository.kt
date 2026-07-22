@@ -72,7 +72,8 @@ class vLockRepository(private val database: vLockDatabase) {
             AppSetting("confirm_before_send", "false"),
             AppSetting("vibration_on_send", "true"),
             AppSetting("haptic_feedback", "true"),
-            AppSetting("ui_theme_style", "Glassmorphism")
+            AppSetting("ui_theme_style", "Glassmorphism"),
+            AppSetting("auto_simulate_reply", "true")
         )
         appSettingDao.insertAll(defaultSettings)
     }
@@ -92,8 +93,31 @@ class vLockRepository(private val database: vLockDatabase) {
         populateDefaultSettings()
     }
 
-    suspend fun insertLog(log: SentSmsLog) = withContext(Dispatchers.IO) {
+    suspend fun insertLog(log: SentSmsLog): Long = withContext(Dispatchers.IO) {
         sentSmsLogDao.insert(log)
+    }
+
+    suspend fun updateLog(log: SentSmsLog) = withContext(Dispatchers.IO) {
+        sentSmsLogDao.update(log)
+    }
+
+    suspend fun recordSmsReply(replyMessage: String, senderNumber: String? = null): SentSmsLog? = withContext(Dispatchers.IO) {
+        val log = if (!senderNumber.isNullOrBlank()) {
+            sentSmsLogDao.getLatestLogForNumber(senderNumber) ?: sentSmsLogDao.getLatestLog()
+        } else {
+            sentSmsLogDao.getLatestLog()
+        }
+
+        if (log != null) {
+            val updatedLog = log.copy(
+                replyMessage = replyMessage,
+                replyTimestamp = System.currentTimeMillis()
+            )
+            sentSmsLogDao.update(updatedLog)
+            updatedLog
+        } else {
+            null
+        }
     }
 
     suspend fun clearAllLogs() = withContext(Dispatchers.IO) {

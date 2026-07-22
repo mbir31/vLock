@@ -34,8 +34,17 @@ interface SentSmsLogDao {
     @Query("SELECT * FROM sent_sms_logs ORDER BY timestamp DESC")
     fun getAll(): Flow<List<SentSmsLog>>
 
+    @Query("SELECT * FROM sent_sms_logs ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatestLog(): SentSmsLog?
+
+    @Query("SELECT * FROM sent_sms_logs WHERE receiverNumber = :number ORDER BY timestamp DESC LIMIT 1")
+    suspend fun getLatestLogForNumber(number: String): SentSmsLog?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(log: SentSmsLog)
+    suspend fun insert(log: SentSmsLog): Long
+
+    @Update
+    suspend fun update(log: SentSmsLog)
 
     @Query("DELETE FROM sent_sms_logs")
     suspend fun clear()
@@ -62,7 +71,7 @@ interface AppSettingDao {
     suspend fun clear()
 }
 
-@Database(entities = [ButtonConfig::class, SentSmsLog::class, AppSetting::class], version = 1, exportSchema = false)
+@Database(entities = [ButtonConfig::class, SentSmsLog::class, AppSetting::class], version = 2, exportSchema = false)
 abstract class vLockDatabase : RoomDatabase() {
     abstract fun buttonConfigDao(): ButtonConfigDao
     abstract fun sentSmsLogDao(): SentSmsLogDao

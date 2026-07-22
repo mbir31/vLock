@@ -21,7 +21,7 @@ object SmsSender {
         sendingMode: String, // "Background" or "Default App"
         showToast: Boolean,
         vibrate: Boolean
-    ): Boolean = withContext(Dispatchers.IO) {
+    ): Long? = withContext(Dispatchers.IO) {
         if (receiverNumber.isBlank()) {
             withContext(Dispatchers.Main) {
                 if (showToast) {
@@ -38,7 +38,7 @@ object SmsSender {
                     errorMessage = "Receiver number not configured"
                 )
             )
-            return@withContext false
+            return@withContext null
         }
 
         if (sendingMode.equals("Background", ignoreCase = true)) {
@@ -59,7 +59,7 @@ object SmsSender {
                         errorMessage = "SEND_SMS permission not granted"
                     )
                 )
-                return@withContext false
+                return@withContext null
             }
 
             try {
@@ -82,7 +82,7 @@ object SmsSender {
                     }
                 }
 
-                repository.insertLog(
+                return@withContext repository.insertLog(
                     SentSmsLog(
                         buttonName = buttonName,
                         smsCode = smsCode,
@@ -91,7 +91,6 @@ object SmsSender {
                         status = "SUCCESS"
                     )
                 )
-                return@withContext true
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     if (showToast) {
@@ -108,7 +107,7 @@ object SmsSender {
                         errorMessage = e.localizedMessage
                     )
                 )
-                return@withContext false
+                return@withContext null
             }
         } else {
             // Default Messaging App Mode
@@ -130,7 +129,7 @@ object SmsSender {
                     }
                 }
 
-                repository.insertLog(
+                return@withContext repository.insertLog(
                     SentSmsLog(
                         buttonName = buttonName,
                         smsCode = smsCode,
@@ -139,7 +138,6 @@ object SmsSender {
                         status = "OPENED"
                     )
                 )
-                return@withContext true
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     if (showToast) {
@@ -156,7 +154,7 @@ object SmsSender {
                         errorMessage = e.localizedMessage
                     )
                 )
-                return@withContext false
+                return@withContext null
             }
         }
     }

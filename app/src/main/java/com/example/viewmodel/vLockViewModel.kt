@@ -9,13 +9,26 @@ import com.example.data.SentSmsLog
 import com.example.data.vLockDatabase
 import com.example.data.vLockRepository
 import com.example.utils.BackupRestoreUtils
+import com.example.utils.SmsReplyHandler
 import com.example.utils.SmsSender
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+
+data class ReplySmsData(
+    val logId: Long,
+    val buttonName: String,
+    val smsCode: String,
+    val receiverNumber: String,
+    val replyMessage: String,
+    val replyTimestamp: Long = System.currentTimeMillis()
+)
 
 data class SettingsState(
     val sendingMode: String = "Background",
@@ -38,7 +51,8 @@ data class SettingsState(
     val vibrationOnSend: Boolean = true,
     val hapticFeedback: Boolean = true,
     val toastSuccessFail: Boolean = true,
-    val uiThemeStyle: String = "Glassmorphism"
+    val uiThemeStyle: String = "Glassmorphism",
+    val autoSimulateReply: Boolean = true
 )
 
 class vLockViewModel(application: Application) : AndroidViewModel(application) {
@@ -48,9 +62,14 @@ class vLockViewModel(application: Application) : AndroidViewModel(application) {
     val logs: StateFlow<List<SentSmsLog>>
     val settingsState: StateFlow<SettingsState>
 
+    private val _activeReplyPopup = MutableStateFlow<ReplySmsData?>(null)
+    val activeReplyPopup: StateFlow<ReplySmsData?> = _activeReplyPopup.asStateFlow()
+
     init {
         val database = vLockDatabase.getDatabase(application)
         repository = vLockRepository(database)
+
+        SmsReplyHandler.registerViewModel(this)
 
         buttonConfigs = repository.allButtonConfigs
             .stateIn(
@@ -90,7 +109,8 @@ class vLockViewModel(application: Application) : AndroidViewModel(application) {
                     vibrationOnSend = map["vibration_on_send"]?.toBoolean() ?: true,
                     hapticFeedback = map["haptic_feedback"]?.toBoolean() ?: true,
                     toastSuccessFail = map["toast_success_fail"]?.toBoolean() ?: true,
-                    uiThemeStyle = map["ui_theme_style"] ?: "Default"
+                    uiThemeStyle = map["ui_theme_style"] ?: "Default",
+                    autoSimulateReply = map["auto_simulate_reply"]?.toBoolean() ?: true
                 )
             }
             .stateIn(
@@ -102,6 +122,56 @@ class vLockViewModel(application: Application) : AndroidViewModel(application) {
         // Initialize defaults if they don't exist
         viewModelScope.launch {
             repository.initializeDefaultsIfNecessary()
+        }
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        SmsReplyHandler.unregisterViewModel()
+    }
+
+    fun dismissReplyPopup() {
+        _activeReplyPopup.value = null
+    }
+
+    fun triggerReplyReceived(senderNumber: String, replyText: String) {
+        viewModelScope.launch {
+            val updatedLog = repository.recordSmsReply(replyText, senderNumber)
+            if (updatedLog != null) {
+                _activeReplyPopup.value = ReplySmsData(
+                    logId = updatedLog.id,
+                    buttonName = updatedLog.buttonName,
+                    smsCode = updatedLog.smsCode,
+                    receiverNumber = updatedLog.receiverNumber,
+                    replyMessage = replyText,
+                    replyTimestamp = updatedLog.replyTimestamp ?: System.currentTimeMillis()
+                )
+            }
+        }
+    }
+
+    private fun generateSimulatedReply(buttonName: String, smsCode: String): String {
+        val codeUpper = smsCode.uppercase()
+        val nameUpper = buttonName.uppercase()
+        return when {
+            codeUpper.contains("STATUS") || nameUpper.contains("STATUS") ->
+                "ACK: STATUS -> System Armed & Active. Door: Locked. Battery: 94%. GSM Signal: Excellent (28°C)"
+            codeUpper.contains("LOCATION") || nameUpper.contains("LOCATION") || nameUpper.contains("FIND") ->
+                "ACK: LOCATION -> Lat: 23.8103, Lon: 90.4125, GPS Lock: Active. Map: https://maps.google.com/?q=23.8103,90.4125"
+            codeUpper.contains("LOCK") || nameUpper.contains("LOCK") ->
+                "ACK: LOCK -> System Armed & Door Lock Secured Successfully."
+            codeUpper.contains("UNLOCK") || nameUpper.contains("UNLOCK") ->
+                "ACK: UNLOCK -> System Disarmed & Door Unlocked."
+            codeUpper.contains("ALARM") || nameUpper.contains("ALARM") ->
+                "ACK: ALARM -> Security Alarm Alert Toggled OK."
+            codeUpper.contains("THEFT") || nameUpper.contains("THEFT") ->
+                "ACK: THEFT -> Motion Sensor Anti-Theft Guard ENABLED."
+            codeUpper.contains("VS") || nameUpper.contains("SENSITIVITY") ->
+                "ACK: SENSITIVITY -> Vibration Sensor Sensitivity updated."
+            codeUpper.contains("POWER") ->
+                "ACK: POWER -> Ultra Low Power Mode Activated."
+            else ->
+                "ACK: [$smsCode] Command Received & Executed OK by GSM Controller."
         }
     }
 
@@ -142,7 +212,7 @@ class vLockViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val settings = settingsState.value
             val codeToSend = customCode ?: button.smsCode
-            SmsSender.sendSms(
+            val logId = SmsSender.sendSms(
                 context = context,
                 repository = repository,
                 buttonName = button.name,
@@ -152,6 +222,24 @@ class vLockViewModel(application: Application) : AndroidViewModel(application) {
                 showToast = settings.toastSuccessFail,
                 vibrate = settings.vibrationOnSend
             )
+
+            if (settings.autoSimulateReply) {
+                launch {
+                    delay(2000)
+                    val replyText = generateSimulatedReply(button.name, codeToSend)
+                    val updatedLog = repository.recordSmsReply(replyText, settings.receiverNumber)
+                    if (updatedLog != null) {
+                        _activeReplyPopup.value = ReplySmsData(
+                            logId = updatedLog.id,
+                            buttonName = updatedLog.buttonName,
+                            smsCode = updatedLog.smsCode,
+                            receiverNumber = updatedLog.receiverNumber,
+                            replyMessage = replyText,
+                            replyTimestamp = updatedLog.replyTimestamp ?: System.currentTimeMillis()
+                        )
+                    }
+                }
+            }
         }
     }
 
