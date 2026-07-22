@@ -438,105 +438,211 @@ fun HomeScreen(
     onRequestPermission: () -> Unit
 ) {
     val context = LocalContext.current
+    val isBWTheme = settings.uiThemeStyle == "Simple B&W" || settings.uiThemeStyle == "Black & White"
+    val headerTextColor = if (isBWTheme) Color(0xFF0F172A) else textColorVal
+    val headerAccentColor = if (isBWTheme) Color(0xFF0F172A) else accentColorVal
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .drawBehind {
+                if (isBWTheme) {
+                    drawRect(Color(0xFFFAFAFA))
+                } else {
+                    drawRect(Color(0xFF090D16))
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(primaryColorVal.copy(alpha = 0.28f), Color.Transparent),
+                            radius = size.width * 0.85f
+                        ),
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.15f)
+                    )
+                    drawCircle(
+                        brush = Brush.radialGradient(
+                            colors = listOf(accentColorVal.copy(alpha = 0.22f), Color.Transparent),
+                            radius = size.width * 0.75f
+                        ),
+                        center = androidx.compose.ui.geometry.Offset(size.width * 0.85f, size.height * 0.65f)
+                    )
+                }
+            }
     ) {
         // TOP 30% - HEADER SECTION
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.3f)
-                .background(headerBgColorVal)
-                .testTag("header_section")
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-                    .statusBarsPadding(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Left side: Custom Logo or Default glowing vector logo
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    if (settings.logoUri.isNotEmpty()) {
-                        AsyncImage(
-                            model = Uri.parse(settings.logoUri),
-                            contentDescription = "App Custom Logo",
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .border(2.dp, accentColorVal, RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop
+                .fillMaxHeight(0.28f)
+                .background(
+                    if (isBWTheme) {
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White,
+                                Color(0xFFF1F5F9),
+                                Color(0xFFFAFAFA)
+                            )
                         )
                     } else {
-                        // Beautiful drawn fallback shield/key logo
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(accentColorVal.copy(alpha = 0.2f))
-                                .border(1.5.dp, accentColorVal, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Shield,
-                                contentDescription = "vLock Default Logo",
-                                tint = accentColorVal,
-                                modifier = Modifier.size(32.dp)
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                headerBgColorVal.copy(alpha = 0.95f),
+                                headerBgColorVal.copy(alpha = 0.80f),
+                                Color(0xFF090D16)
                             )
+                        )
+                    }
+                )
+                .testTag("header_section")
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .statusBarsPadding(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Left side: Custom Logo or Default glowing vector logo
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        if (settings.logoUri.isNotEmpty()) {
+                            AsyncImage(
+                                model = Uri.parse(settings.logoUri),
+                                contentDescription = "App Custom Logo",
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .border(2.dp, headerAccentColor, RoundedCornerShape(14.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            // Bespoke drawn fallback shield/key logo with glowing ring
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isBWTheme) {
+                                            Brush.verticalGradient(listOf(Color(0xFFF1F5F9), Color(0xFFF1F5F9)))
+                                        } else {
+                                            Brush.radialGradient(
+                                                colors = listOf(accentColorVal.copy(alpha = 0.35f), Color.Transparent)
+                                            )
+                                        }
+                                    )
+                                    .border(1.5.dp, headerAccentColor, RoundedCornerShape(14.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Shield,
+                                    contentDescription = "vLock Default Logo",
+                                    tint = headerAccentColor,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
                         }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        // Title Text
+                        Text(
+                            text = settings.titleText,
+                            fontSize = 20.sp,
+                            fontFamily = customFont,
+                            fontWeight = if (settings.titleBold) FontWeight.Bold else FontWeight.Normal,
+                            color = headerTextColor,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    // Title Text
-                    Text(
-                        text = settings.titleText,
-                        fontSize = 20.sp,
-                        fontFamily = customFont,
-                        fontWeight = if (settings.titleBold) FontWeight.Bold else FontWeight.Normal,
-                        color = textColorVal,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    // Action Menu: Settings button
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(if (isBWTheme) Color(0xFFF1F5F9) else Color.White.copy(alpha = 0.12f))
+                            .border(1.dp, if (isBWTheme) Color(0xFFCBD5E1) else Color.White.copy(alpha = 0.25f), CircleShape)
+                            .clickable {
+                                if (settings.hapticFeedback) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                onNavigateToSettings()
+                            }
+                            .testTag("settings_button"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = headerTextColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
 
-                // Action Menu: Settings button
-                IconButton(
-                    onClick = {
-                        if (settings.hapticFeedback) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        }
-                        onNavigateToSettings()
-                    },
-                    modifier = Modifier.testTag("settings_button")
+                // Real-Time System Status Pill Indicator
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (isBWTheme) Color.White else Color.Black.copy(alpha = 0.35f))
+                        .border(1.dp, if (isBWTheme) Color(0xFFCBD5E1) else Color.White.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings",
-                        tint = textColorVal,
-                        modifier = Modifier.size(28.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Pulsing Green LED
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF10B981))
+                                .border(2.dp, Color(0xFF6EE7B7), CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (settings.sendingMode == "Background") "DIRECT CONTROLLER LINK" else "MESSAGING CONTROLLER LINK",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isBWTheme) Color(0xFF0F172A) else Color(0xFFE2E8F0),
+                            fontFamily = customFont
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (isBWTheme) Color(0xFF0F172A) else primaryColorVal.copy(alpha = 0.3f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = if (settings.sendingMode == "Background") "BACKGROUND ACTIVE" else "APP MODE",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isBWTheme) Color.White else primaryColorVal,
+                            fontFamily = customFont
+                        )
+                    }
                 }
             }
 
-            // Small status bar indicator
+            // Glowing separator stroke
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .height(4.dp)
+                    .height(2.dp)
                     .background(
-                        Brush.horizontalGradient(
-                            listOf(accentColorVal, primaryColorVal)
-                        )
+                        if (isBWTheme) Brush.horizontalGradient(listOf(Color(0xFFE2E8F0), Color(0xFF0F172A), Color(0xFFE2E8F0)))
+                        else Brush.horizontalGradient(listOf(accentColorVal, primaryColorVal, Color.Transparent))
                     )
             )
         }
@@ -693,6 +799,173 @@ fun GridSection(
                     }
 
                     when (uiThemeStyle) {
+                        "Simple B&W", "Black & White" -> {
+                            // Minimalist Clean Black & White Material 3 Card
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(
+                                        when (buttonSize) {
+                                            "Small" -> 64.dp
+                                            "Large" -> 104.dp
+                                            else -> 84.dp
+                                        }
+                                    )
+                                    .clip(RoundedCornerShape(cornerRadius))
+                                    .background(Color.White)
+                                    .border(1.5.dp, Color(0xFF0F172A), RoundedCornerShape(cornerRadius))
+                                    .clickable { onButtonTap(button) }
+                                    .testTag("cmd_button_${button.id}"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(
+                                                when (buttonSize) {
+                                                    "Small" -> 26.dp
+                                                    "Large" -> 38.dp
+                                                    else -> 32.dp
+                                                }
+                                            )
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF0F172A)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = IconMapper.getIcon(button.iconName),
+                                            contentDescription = button.name,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(
+                                                when (buttonSize) {
+                                                    "Small" -> 16.dp
+                                                    "Large" -> 24.dp
+                                                    else -> 20.dp
+                                                }
+                                            )
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = button.name,
+                                        fontSize = when (buttonSize) {
+                                            "Small" -> 10.sp
+                                            "Large" -> 13.sp
+                                            else -> 11.sp
+                                        },
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF0F172A),
+                                        fontFamily = customFont,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                        "Glassmorphism" -> {
+                            // Ultra Frosted Glassmorphism with Translucent Acrylic & Vibrant Gradient Border
+                            val vibrantGlassBorder = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.90f),
+                                    Color(0xFF38BDF8), // Vibrant Sky Cyan
+                                    Color(0xFFEC4899), // Neon Pink
+                                    Color.White.copy(alpha = 0.25f)
+                                )
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(
+                                        when (buttonSize) {
+                                            "Small" -> 64.dp
+                                            "Large" -> 104.dp
+                                            else -> 84.dp
+                                        }
+                                    )
+                                    .clip(RoundedCornerShape(cornerRadius))
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                Color.White.copy(alpha = 0.28f),
+                                                customButtonColor.copy(alpha = 0.35f),
+                                                Color(0xFF0F172A).copy(alpha = 0.65f)
+                                            )
+                                        )
+                                    )
+                                    .border(1.8.dp, vibrantGlassBorder, RoundedCornerShape(cornerRadius))
+                                    .clickable { onButtonTap(button) }
+                                    .testTag("cmd_button_${button.id}"),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                // Frosted Sheen Reflection (Top-Left Specular Light)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .drawBehind {
+                                            drawCircle(
+                                                brush = Brush.radialGradient(
+                                                    colors = listOf(Color.White.copy(alpha = 0.40f), Color.Transparent)
+                                                ),
+                                                radius = size.width * 0.70f,
+                                                center = androidx.compose.ui.geometry.Offset(0f, 0f)
+                                            )
+                                        }
+                                )
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center,
+                                    modifier = Modifier.padding(6.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(
+                                                when (buttonSize) {
+                                                    "Small" -> 26.dp
+                                                    "Large" -> 38.dp
+                                                    else -> 32.dp
+                                                }
+                                            )
+                                            .clip(CircleShape)
+                                            .background(Color.White.copy(alpha = 0.25f))
+                                            .border(1.dp, Color.White.copy(alpha = 0.6f), CircleShape),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = IconMapper.getIcon(button.iconName),
+                                            contentDescription = button.name,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(
+                                                when (buttonSize) {
+                                                    "Small" -> 16.dp
+                                                    "Large" -> 24.dp
+                                                    else -> 20.dp
+                                                }
+                                            )
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = button.name,
+                                        fontSize = when (buttonSize) {
+                                            "Small" -> 10.sp
+                                            "Large" -> 13.sp
+                                            else -> 11.sp
+                                        },
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontFamily = customFont,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
                         "3D Tactile" -> {
                             // 3D Physical Tactile Push-Button Interface
                             val baseHeight = when (buttonSize) {
@@ -917,49 +1190,87 @@ fun GridSection(
                             }
                         }
                         else -> {
-                            // Default (Modern Flat)
+                            // Default: Bespoke Glassmorphic Neosleek Interface
+                            val glassStroke = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = 0.50f),
+                                    Color.White.copy(alpha = 0.10f),
+                                    customButtonColor.copy(alpha = 0.60f)
+                                )
+                            )
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(
                                         when (buttonSize) {
-                                            "Small" -> 60.dp
-                                            "Large" -> 100.dp
-                                            else -> 80.dp // Medium
+                                            "Small" -> 64.dp
+                                            "Large" -> 104.dp
+                                            else -> 84.dp
                                         }
                                     )
                                     .clip(RoundedCornerShape(cornerRadius))
-                                    .background(customButtonColor)
-                                    .clickable {
-                                        onButtonTap(button)
-                                    }
+                                    .background(
+                                        Brush.verticalGradient(
+                                            colors = listOf(
+                                                customButtonColor.copy(alpha = 0.85f),
+                                                customButtonColor.copy(alpha = 0.60f),
+                                                Color(0xFF0F172A).copy(alpha = 0.90f)
+                                            )
+                                        )
+                                    )
+                                    .border(1.2.dp, glassStroke, RoundedCornerShape(cornerRadius))
+                                    .clickable { onButtonTap(button) }
                                     .testTag("cmd_button_${button.id}"),
                                 contentAlignment = Alignment.Center
                             ) {
+                                // Subtle background ambient aura
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .background(
+                                            Brush.radialGradient(
+                                                colors = listOf(Color.White.copy(alpha = 0.20f), Color.Transparent)
+                                            )
+                                        )
+                                )
                                 Column(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center,
                                     modifier = Modifier.padding(6.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = IconMapper.getIcon(button.iconName),
-                                        contentDescription = button.name,
-                                        tint = textColorVal,
-                                        modifier = Modifier.size(
-                                            when (buttonSize) {
-                                                "Small" -> 18.dp
-                                                "Large" -> 28.dp
-                                                else -> 24.dp
-                                            }
+                                    Box(
+                                        modifier = Modifier
+                                            .size(
+                                                when (buttonSize) {
+                                                    "Small" -> 26.dp
+                                                    "Large" -> 38.dp
+                                                    else -> 32.dp
+                                                }
+                                            )
+                                            .clip(CircleShape)
+                                            .background(Color.White.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = IconMapper.getIcon(button.iconName),
+                                            contentDescription = button.name,
+                                            tint = textColorVal,
+                                            modifier = Modifier.size(
+                                                when (buttonSize) {
+                                                    "Small" -> 16.dp
+                                                    "Large" -> 24.dp
+                                                    else -> 20.dp
+                                                }
+                                            )
                                         )
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = button.name,
                                         fontSize = when (buttonSize) {
                                             "Small" -> 10.sp
-                                            "Large" -> 14.sp
-                                            else -> 12.sp
+                                            "Large" -> 13.sp
+                                            else -> 11.sp
                                         },
                                         fontWeight = FontWeight.Bold,
                                         color = textColorVal,
@@ -1582,40 +1893,44 @@ fun SettingsScreen(
                             Text("UI THEME CUSTOMIZATION", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = customFont)
                         }
 
-                        // Theme Interface Selector (Default Flat, 3D Tactile, Heavy Pro Gold, Cyberpunk Industrial)
+                        // Theme Interface Selector (Glassmorphism, Simple B&W, Default Flat, 3D Tactile, Heavy Pro Gold, Cyberpunk Industrial)
                         item {
                             Column {
                                 Text("Interface Theme Style", fontWeight = FontWeight.SemiBold, fontFamily = customFont)
-                                Text("Select tile surface and depth theme", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontFamily = customFont)
+                                Text("Select tile surface and acrylic depth theme", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontFamily = customFont)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState())
                                 ) {
                                     val styles = listOf(
-                                        "Default" to "Default (Flat)",
+                                        "Glassmorphism" to "✨ Glass",
+                                        "Simple B&W" to "🔳 Simple B&W",
+                                        "Default" to "Neosleek",
                                         "3D Tactile" to "3D Tactile",
-                                        "Heavy Pro Gold" to "Heavy Gold",
-                                        "Cyberpunk Industrial" to "Cyberpunk"
+                                        "Heavy Pro Gold" to "Gold",
+                                        "Cyberpunk Industrial" to "Cyber"
                                     )
                                     styles.forEach { (styleKey, styleLabel) ->
                                         val isSelected = settings.uiThemeStyle == styleKey
                                         Box(
                                             modifier = Modifier
-                                                .weight(1f)
                                                 .clip(RoundedCornerShape(8.dp))
                                                 .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
                                                 .clickable { viewModel.updateSetting("ui_theme_style", styleKey) }
-                                                .padding(vertical = 8.dp, horizontal = 4.dp),
+                                                .padding(vertical = 8.dp, horizontal = 10.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Text(
                                                 text = styleLabel,
-                                                fontSize = 10.sp,
+                                                fontSize = 11.sp,
                                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                                 color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                                 fontFamily = customFont,
-                                                textAlign = TextAlign.Center
+                                                textAlign = TextAlign.Center,
+                                                maxLines = 1
                                             )
                                         }
                                     }

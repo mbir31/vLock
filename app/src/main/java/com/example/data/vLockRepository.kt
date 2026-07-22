@@ -72,7 +72,7 @@ class vLockRepository(private val database: vLockDatabase) {
             AppSetting("confirm_before_send", "false"),
             AppSetting("vibration_on_send", "true"),
             AppSetting("haptic_feedback", "true"),
-            AppSetting("ui_theme_style", "Default")
+            AppSetting("ui_theme_style", "Glassmorphism")
         )
         appSettingDao.insertAll(defaultSettings)
     }

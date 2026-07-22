@@ -38,7 +38,7 @@ data class SettingsState(
     val vibrationOnSend: Boolean = true,
     val hapticFeedback: Boolean = true,
     val toastSuccessFail: Boolean = true,
-    val uiThemeStyle: String = "Default"
+    val uiThemeStyle: String = "Glassmorphism"
 )
 
 class vLockViewModel(application: Application) : AndroidViewModel(application) {
