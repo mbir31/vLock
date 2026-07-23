@@ -92,6 +92,11 @@ For full functionality, **vLock 2.0** requires the following Android permissions
 
 ---
 
+[📥 Download Latest APK (v2.0.0)] 
+( https://github.com/mbir31/vLock/releases/download/v2.0.0/vLock.2.0.0.apk )
+
+---
+
 ## 👨‍💻 Author & Credits
 
 - **Creator & Developer**: **[mbr31](https://github.com/mbr31)**
