@@ -62,6 +62,7 @@ While basic apps like [V-Lock Lite on Google Play](https://play.google.com/store
 | **SMS Command Sending** | Basic | Advanced |
 | **Incoming Tracker Reply Pairing** | ❌ No | **Automatic (Targeted Number)** |
 | **Real-time Reply Modal Popup** | ❌ No | **Instant On-Screen Popup** |
+| **Accessibility by Widget** | ❌ No | **Instant action by upto 4-button on homescreen widget** |
 | **Command & Reply Local Database** | ❌ Limited | **Full Offline Room DB** |
 | **UI Design Style** | Basic Stock UI | **Modern Glassmorphism** |
 | **Theme Customization** | ❌ None | **4 Themes (Glass, Cyber, Gold, Dark)** |
