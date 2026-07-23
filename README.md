@@ -12,7 +12,7 @@
 
 ## 📌 About vLock 2.0
 
-**vLock 2.0** was created by **[mbr31](https://github.com/mbr31)** to solve the limitations of standard SMS vehicle control applications. Modern GPS trackers and vehicle security systems rely on SMS commands for essential functions like engine cut-off, location querying, speed alerts, and status checks. 
+**vLock 2.0** was created by **[mbir31](https://github.com/mbir31)** to solve the limitations of standard SMS vehicle control applications. Modern GPS trackers and vehicle security systems rely on SMS commands for essential functions like engine cut-off, location querying, speed alerts, and status checks. 
 
 While basic apps like [V-Lock Lite on Google Play](https://play.google.com/store/apps/details?id=com.vehiclelock.vlocklite) provide standard SMS triggering, **vLock 2.0** completely redefines the user experience with:
 
@@ -100,11 +100,11 @@ For full functionality, **vLock 2.0** requires the following Android permissions
 
 ## 👨‍💻 Author & Credits
 
-- **Creator & Developer**: **[mbr31](https://github.com/mbr31)**
+- **Creator & Developer**: **[mbir31](https://github.com/mbir31)**
 - **Original Concept Reference**: Inspired by [V-Lock Lite on Google Play Store](https://play.google.com/store/apps/details?id=com.vehiclelock.vlocklite).
 
 ---
 
 ## 📄 License
 
-This project is released under the **MIT License**. Feel free to use, modify, and distribute with attribution to the original creator **mbr31**.
+This project is released under the **MIT License**. Feel free to use, modify, and distribute with attribution to the original creator **mbir31**.
