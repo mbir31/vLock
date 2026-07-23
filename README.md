@@ -16,11 +16,13 @@
 
 While basic apps like [V-Lock Lite on Google Play](https://play.google.com/store/apps/details?id=com.vehiclelock.vlocklite) provide standard SMS triggering, **vLock 2.0** completely redefines the user experience with:
 
+- **Hassle-free Single-Tap command**: Open the app, tap a button and get the task done with the reply in this same app! No need to open any messaging app, ever.
 - **Automatic Reply Matching**: Automatically captures incoming reply SMS messages sent by the specific vehicle tracker number and pairs them to the command sent, popping up an instant real-time response modal on your screen.
 - **Sleek Glassmorphism UI**: High-contrast, futuristic design that avoids outdated stock Android UI patterns.
 - **Complete Command & Reply History**: Every command sent and reply received is stored locally in an offline Room SQLite database with detailed timestamps and status badges.
 - **Customizable Buttons & Command Presets**: Reorganize, customize, or add new SMS codes for any vehicle or tracker model.
 - **Multi-Theme Support**: Choose between *Glassmorphism*, *Cyberpunk Neon*, *Gold Accent*, and *Midnight Dark* UI themes.
+- **Accessibility even on your HomeScreen**: You can add a widget on home-screen and add upto four frequently used buttons to send command even without opening the app itself!
 
 ---
 
