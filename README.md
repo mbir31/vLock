@@ -57,7 +57,7 @@ While basic apps like [V-Lock Lite on Google Play](https://play.google.com/store
 
 ## 🔄 Comparison: vLock 2.0 vs. V-Lock Lite
 
-| Feature | Official V-Lock Lite | **vLock 2.0 (by mbr31)** |
+| Feature | Official V-Lock Lite | **vLock 2.0 (by mbir31)** |
 | :--- | :---: | :---: |
 | **SMS Command Sending** | Basic | Advanced |
 | **Incoming Tracker Reply Pairing** | ❌ No | **Automatic (Targeted Number)** |
