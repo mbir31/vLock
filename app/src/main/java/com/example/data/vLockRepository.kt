@@ -105,13 +105,25 @@ class vLockRepository(private val database: vLockDatabase) {
 
     private fun isSamePhoneNumber(num1: String?, num2: String?): Boolean {
         if (num1.isNullOrBlank() || num2.isNullOrBlank()) return true
-        val clean1 = num1.filter { it.isDigit() }
-        val clean2 = num2.filter { it.isDigit() }
-        if (clean1.isEmpty() || clean2.isEmpty()) return true
+        val raw1 = num1.trim()
+        val raw2 = num2.trim()
+        if (raw1.equals(raw2, ignoreCase = true)) return true
+
+        val clean1 = raw1.filter { it.isDigit() }
+        val clean2 = raw2.filter { it.isDigit() }
+
+        if (clean1.isEmpty() || clean2.isEmpty()) {
+            return raw1.equals(raw2, ignoreCase = true)
+        }
+
         if (clean1 == clean2) return true
-        if (clean1.length >= 7 && clean2.length >= 7) {
-            val minLen = minOf(clean1.length, clean2.length, 10)
-            return clean1.takeLast(minLen) == clean2.takeLast(minLen)
+        if (clean1.endsWith(clean2) || clean2.endsWith(clean1)) return true
+
+        val len1 = clean1.length
+        val len2 = clean2.length
+        if (len1 >= 6 && len2 >= 6) {
+            val compareLen = minOf(len1, len2, 10)
+            return clean1.takeLast(compareLen) == clean2.takeLast(compareLen)
         }
         return false
     }
@@ -124,14 +136,16 @@ class vLockRepository(private val database: vLockDatabase) {
         val recentLogs = sentSmsLogDao.getRecentLogs()
         if (recentLogs.isEmpty()) return@withContext null
 
-        // STRICT POLICY: Only match command SMS sent BEFORE or AT the time the reply SMS arrived,
-        // and ensure the command hasn't already received a reply.
+        // STRICT POLICY:
+        // 1. Must match the specific receiver phone number to which the command SMS was sent.
+        // 2. Command must have been sent before or around the reply timestamp (allowing normal carrier delay).
+        // 3. Command must currently be awaiting a reply (log.replyMessage == null).
         val matchedLog = recentLogs.firstOrNull { log ->
-            val sentBeforeReply = log.timestamp <= (smsTimestamp + 5000L)
             val numberMatches = senderNumber.isNullOrBlank() || isSamePhoneNumber(log.receiverNumber, senderNumber)
+            val sentBeforeReply = log.timestamp <= (smsTimestamp + 120_000L) // Command sent before or around reply
             val isAwaitingReply = log.replyMessage == null
 
-            sentBeforeReply && numberMatches && isAwaitingReply
+            numberMatches && sentBeforeReply && isAwaitingReply
         }
 
         if (matchedLog != null) {

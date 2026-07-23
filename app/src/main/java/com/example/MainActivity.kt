@@ -149,28 +149,38 @@ fun vLockAppContent(
     // Navigation Screens (Internal state-based for Single-View compliance)
     var currentScreen by remember { mutableStateOf("home") } // "home" or "settings"
 
-    // SMS permission check
-    var hasSmsPermission by remember {
+    // SMS permission check (SEND_SMS and RECEIVE_SMS)
+    var hasSmsPermissions by remember {
         mutableStateOf(
-            context.checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED
+            context.checkSelfPermission(Manifest.permission.SEND_SMS) == PackageManager.PERMISSION_GRANTED &&
+            context.checkSelfPermission(Manifest.permission.RECEIVE_SMS) == PackageManager.PERMISSION_GRANTED
         )
     }
+    val hasSmsPermission = hasSmsPermissions
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        hasSmsPermission = isGranted
-        if (isGranted) {
-            Toast.makeText(context, "SMS Permission Granted!", Toast.LENGTH_SHORT).show()
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val sendGranted = permissions[Manifest.permission.SEND_SMS] ?: false
+        val receiveGranted = permissions[Manifest.permission.RECEIVE_SMS] ?: false
+        hasSmsPermissions = sendGranted && receiveGranted
+        if (sendGranted && receiveGranted) {
+            Toast.makeText(context, "SMS Permissions Granted!", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(context, "SMS Permission is required for background mode.", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "SMS permissions are required to send commands and receive replies.", Toast.LENGTH_LONG).show()
         }
     }
 
-    // Trigger permission request if in background mode and not yet granted
-    LaunchedEffect(settings.sendingMode, hasSmsPermission) {
-        if (settings.sendingMode == "Background" && !hasSmsPermission) {
-            permissionLauncher.launch(Manifest.permission.SEND_SMS)
+    // Trigger permission request if permissions are missing
+    LaunchedEffect(settings.sendingMode, hasSmsPermissions) {
+        if (!hasSmsPermissions) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.SEND_SMS,
+                    Manifest.permission.RECEIVE_SMS,
+                    Manifest.permission.READ_SMS
+                )
+            )
         }
     }
 
@@ -416,7 +426,15 @@ fun vLockAppContent(
                                 onNavigateToSettings = { currentScreen = "settings" },
                                 onShowPopup = { activePopup = it },
                                 haptic = haptic,
-                                onRequestPermission = { permissionLauncher.launch(Manifest.permission.SEND_SMS) }
+                                onRequestPermission = {
+                                    permissionLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.SEND_SMS,
+                                            Manifest.permission.RECEIVE_SMS,
+                                            Manifest.permission.READ_SMS
+                                        )
+                                    )
+                                }
                             )
                             "logs" -> LogsScreen(
                                 logs = logs,

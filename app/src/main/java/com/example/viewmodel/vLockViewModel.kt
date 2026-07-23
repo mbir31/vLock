@@ -153,18 +153,22 @@ class vLockViewModel(application: Application) : AndroidViewModel(application) {
         _activeReplyPopup.value = null
     }
 
+    fun showReplyPopup(log: SentSmsLog) {
+        _activeReplyPopup.value = ReplySmsData(
+            logId = log.id,
+            buttonName = log.buttonName,
+            smsCode = log.smsCode,
+            receiverNumber = log.receiverNumber,
+            replyMessage = log.replyMessage ?: "",
+            replyTimestamp = log.replyTimestamp ?: System.currentTimeMillis()
+        )
+    }
+
     fun triggerReplyReceived(senderNumber: String, replyText: String, smsTimestamp: Long = System.currentTimeMillis()) {
         viewModelScope.launch {
             val updatedLog = repository.recordSmsReply(replyText, senderNumber, smsTimestamp)
             if (updatedLog != null) {
-                _activeReplyPopup.value = ReplySmsData(
-                    logId = updatedLog.id,
-                    buttonName = updatedLog.buttonName,
-                    smsCode = updatedLog.smsCode,
-                    receiverNumber = updatedLog.receiverNumber,
-                    replyMessage = replyText,
-                    replyTimestamp = updatedLog.replyTimestamp ?: System.currentTimeMillis()
-                )
+                showReplyPopup(updatedLog)
             }
         }
     }
