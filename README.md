@@ -4,7 +4,7 @@
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple.svg)](https://kotlinlang.org/)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-4285F4.svg)](https://developer.android.com/jetpack/compose)
 [![Room DB](https://img.shields.io/badge/Database-Room-orange.svg)](https://developer.android.com/training/data-storage/room)
-[![Creator](https://img.shields.io/badge/Creator-mbr31-blue.svg)](https://github.com/mbr31)
+[![Creator](https://img.shields.io/badge/Creator-mbir31-blue.svg)](https://github.com/mbir31)
 
 > **vLock 2.0** is an advanced, feature-rich, modern SMS-based vehicle security & GPS tracker controller for Android. Built as an enhanced successor to the official Play Store app **V-Lock Lite**, vLock 2.0 brings real-time incoming SMS reply pairing, customizable Glassmorphism themes, full offline history logs, and instant preset management.
 
