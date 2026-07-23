@@ -25,6 +25,11 @@ class vLockRepository(private val database: vLockDatabase) {
         val existingSettings = appSettingDao.getAll()
         if (existingSettings.isEmpty()) {
             populateDefaultSettings()
+        } else {
+            val autoSim = appSettingDao.getByKey("auto_simulate_reply")
+            if (autoSim?.value == "true") {
+                appSettingDao.insert(AppSetting("auto_simulate_reply", "false"))
+            }
         }
     }
 
@@ -75,7 +80,7 @@ class vLockRepository(private val database: vLockDatabase) {
             AppSetting("vibration_on_send", "true"),
             AppSetting("haptic_feedback", "true"),
             AppSetting("ui_theme_style", "Glassmorphism"),
-            AppSetting("auto_simulate_reply", "true")
+            AppSetting("auto_simulate_reply", "false")
         )
         appSettingDao.insertAll(defaultSettings)
     }

@@ -57,7 +57,7 @@ data class SettingsState(
     val hapticFeedback: Boolean = true,
     val toastSuccessFail: Boolean = true,
     val uiThemeStyle: String = "Glassmorphism",
-    val autoSimulateReply: Boolean = true,
+    val autoSimulateReply: Boolean = false,
     val appIconStyle: String = "Default",
     val showHeaderCard: Boolean = false,
     val widgetButtonIds: String = ""
